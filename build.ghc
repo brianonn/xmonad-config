@@ -1,0 +1,32 @@
+#!/bin/sh
+
+export LANG=C
+
+export LANG=C
+cfg="$HOME/.config/xmonad"
+pkg="my-xmonad"
+localbin="${cfg}/bin"
+out="${localbin}/${pkg}"
+
+mkdir -p "${localbin}"
+
+exec ghc  \
+  -package xmonad \
+  -package xmonad-contrib \
+  -package X11 \
+  --make "${cfg}/xmonad.hs" \
+  -i               \
+  -ilib            \
+  -fforce-recomp   \
+  -v0              \
+  -o "$out"
+
+status=$?
+
+if [ $status -eq 0 ]; then
+    [ -n "$1" ] && mv -f ${localbin}/${pkg} "$1"
+    [ -e "${localbin}/${pkg}" ] && echo "Created ${localbin}/${pkg} for testing"
+else
+    echo "ERROR: exit code $status"
+fi
+exit $status
