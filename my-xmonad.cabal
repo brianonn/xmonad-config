@@ -6,7 +6,7 @@ cabal-version:       >=1.10
 executable my-xmonad
   main-is:             xmonad.hs
   -- other-modules lists custom modules in my ~/.xmonad/lib/ directory
-  other-modules:
+  other-modules:     BorderColors
   build-depends:       base
                      , xmonad >= 0.13
                      , xmonad-contrib >= 0.13
@@ -14,6 +14,8 @@ executable my-xmonad
                      , X11 >= 1.8
                      , X11-xft >= 0.3
                      , containers
-  -- hs-source-dirs:      lib
+  hs-source-dirs:      .
+                       , lib
   default-language:    Haskell2010
-  ghc-options:         -Wall -Werror -Wwarn=name-shadowing -fno-warn-missing-signatures -threaded
+  ghc-options:         -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -Wwarn=name-shadowing -fno-warn-missing-signatures -O2 -j -threaded -dynamic
+  -- ghc-options:         -Wall -Werror -Wwarn=name-shadowing -fno-warn-missing-signatures -threaded
