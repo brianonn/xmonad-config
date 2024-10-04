@@ -68,6 +68,8 @@ import XMonad.Prompt
     fgHLight, font, height, position, promptBorderWidth,
   )
 
+-- these are local from ./lib (hopefully)
+import BorderColors
 
 
 ----------------------------mupdf--------------------------------------------
@@ -115,47 +117,6 @@ namedWorkspaces = ["1: term","2: web","3: code","4: media"]
 myWorkspaces :: [[Char]]
 myWorkspaces =  namedWorkspaces ++ map show anonymousWorkspaces
 
-
-------------------------------------------------------------------------
--- Window rules
--- Execute arbitrary actions and WindowSet manipulations when managing
--- a new window. You can use this to, for example, always float a
--- particular program, or have a client always appear on a particular
--- workspace.
---
--- To find the property name associated with a program, use
--- > xprop | grep WM_CLASS
--- and click on the client you're interested in.
---
--- To match on the WM_NAME, you can use 'title' in the same way that
--- 'className' and 'resource' are used below.
---
-myManageHook = composeAll
-    [
-      isDialog                        --> doFloat
-    , resource  =? "desktop_window"   --> doIgnore
-    , resource  =? "kdesktop"         --> doIgnore
-    , className =? "mpv"              --> doRectFloat (W.RationalRect (1 % 4) (1 % 4) (1 % 2) (1 % 2))
-    , className =? "Google-chrome"    --> doShift "2:web"
-    , className =? "Firefox"          --> doShift "2:web"
-    , className =? "Firefox" <&&> resource =? "Toolkit" --> doShift "2:web" >> doFloat
-    , className =? "Xmessage"         --> doCenterFloat
-    , className =? "Gxmessage"        --> doCenterFloat
-    , className =? "Galculator"       --> doCenterFloat
-    , className =? "Steam"            --> doCenterFloat
-    , className =? "Gimp"             --> doCenterFloat
-    , resource  =? "gpicview"         --> doCenterFloat
-    , className =? "MPlayer"          --> doCenterFloat
-    , className =? "Pavucontrol"      --> doCenterFloat
-    , className =? "VirtualBox"       --> doShift "4:vm"
-    , className =? "Xchat"            --> doShift "5:media"
-    , className =? "stalonetray"      --> doIgnore
-    , isFullscreen                    --> (doF W.focusDown <+> doFullFloat)
-    -- , isFloating                      --> doSetBorderColor activeWarn
-    , className =? "Mate-power-preferences"       --> doCenterFloat
-    , className =? "Xfce4-power-manager-settings" --> doCenterFloat
-    , namedScratchpadManageHook myScratchPads
-    ]
 
 
 
@@ -241,12 +202,13 @@ red     = "#dc322f"
 -- cyan    = "#2aa198"
 -- green   = "#859900"
 
-myNormalBorderColor     = "#000000" -- gold1
+myNormalBorderColor     = "#111111" -- gold1
 myFocusedBorderColor    = "#8489ff" -- gold3
+-- floatingBorderColor    = "#e489ff"
+floatingBorderColor    = "#51afaf"
 
 active      = gold3
 inactive    = gold1
--- floating    = violet
 -- activeWarn  = red
 
 -- Color of current window title in xmobar.
@@ -573,6 +535,47 @@ myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
     -- you may also bind events to the mouse scroll wheel (button4 and button5)
   ]
 
+------------------------------------------------------------------------
+-- Window rules
+-- Execute arbitrary actions and WindowSet manipulations when managing
+-- a new window. You can use this to, for example, always float a
+-- particular program, or have a client always appear on a particular
+-- workspace.
+--
+-- To find the property name associated with a program, use
+-- > xprop | grep WM_CLASS
+-- and click on the client you're interested in.
+--
+-- To match on the WM_NAME, you can use 'title' in the same way that
+-- 'className' and 'resource' are used below.
+--
+myManageHook = composeAll
+    [
+      isDialog                        --> doFloat
+    , resource  =? "desktop_window"   --> doIgnore
+    , resource  =? "kdesktop"         --> doIgnore
+    , className =? "mpv"              --> doRectFloat (W.RationalRect (1 % 4) (1 % 4) (1 % 2) (1 % 2))
+    , className =? "Google-chrome"    --> doShift "2:web"
+    , className =? "Firefox"          --> doShift "2:web"
+    , className =? "Firefox" <&&> resource =? "Toolkit" --> doShift "2:web" >> doFloat
+    , className =? "Xmessage"         --> doCenterFloat
+    , className =? "Gxmessage"        --> doCenterFloat
+    , className =? "Galculator"       --> doCenterFloat
+    , className =? "Steam"            --> doCenterFloat
+    , className =? "Gimp"             --> doCenterFloat
+    , resource  =? "gpicview"         --> doCenterFloat
+    , className =? "MPlayer"          --> doCenterFloat
+    , className =? "Pavucontrol"      --> doCenterFloat
+    , className =? "VirtualBox"       --> doShift "4:vm"
+    , className =? "Xchat"            --> doShift "5:media"
+    , className =? "stalonetray"      --> doIgnore
+    , className =? "Mate-power-preferences"       --> doCenterFloat
+    , className =? "Xfce4-power-manager-settings" --> doCenterFloat
+    , isFullscreen                    --> (doF W.focusDown <+> doFullFloat)
+    --, isFloating                      --> doSetBorderColor activeWarn
+    , namedScratchpadManageHook myScratchPads
+    ]
+
 
 ------------------------------------------------------------------------
 -- Status bars and logging
@@ -598,17 +601,36 @@ myStartupHook = do
   setDefaultCursor xC_left_ptr
 
 ---------------------------------------------------
--- Returns [True] if the current window is floating
---isFloating :: Query Bool
---isFloating :: Bool
---isFloating = do
---  withFocused $ \windowId -> do
---    floats <- gets (W.floating . windowset)
---    r <- windowId `M.member` floats
---    return $ case r of
---        Just [_] -> True
---        _ -> False
---
+-- Log hook is run after every window change event.
+-- This is useful for custom actions on the current windowset
+-- pass in the statusbar handle from spawnPipe
+myLogHook :: Handle -> X ()
+myLogHook handle = do
+  updatePointer (0.75, 0.75) (0.75, 0.75)
+    >> colorWhen isFloating floatingBorderColor
+    >> dynamicLogWithPP xmobarPP {
+         ppCurrent = xmobarColor xmobarCurrentWorkspaceColor "" . wrap "[" "]"
+         , ppTitle = xmobarColor xmobarTitleColor "" . shorten 50
+         , ppSep = "   "
+         , ppOutput = hPutStrLn handle
+       }
+
+---------------------------------------------------
+-- | Is the focused window the \"master window\" of the current workspace?
+isMaster :: Query Bool
+isMaster = ask >>= (\w -> liftX $ withWindowSet $ \ws -> return $ Just w == master ws)
+  where
+    master :: WindowSet -> Maybe Window
+    master ws =
+        case W.integrate' $ W.stack $ W.workspace $ W.current ws of
+             [] -> Nothing
+             (x:xs) -> Just x
+
+-- | Is the focused window a floating window?
+isFloating :: Query Bool
+isFloating = ask >>= (\w -> liftX $ withWindowSet $ \ws -> return $ M.member w $ W.floating ws)
+
+
 ----------------------------------------------------
 --ifBrowser :: X () -> X () -> X ()
 --ifBrowser thenX elseX =
@@ -618,22 +640,24 @@ myStartupHook = do
 --      then thenX
 --      else elseX
 --------------------------------------------------
--- goal here is to set the floating windows boarder to different color so that
+-- goal here is to set the floating windows border to a different color so that
 -- I know it was floating.  Too many times a window is floating and I don't know it
 -- also could be nice to set a sudo window border to red color  ! :)
--- TODO - make this work
 -- the functions isFloating and the managehook is not working
--- doSetBorderColor :: String -> ManageHook
+--doSetBorderColor :: String -> ManageHook
 -- doSetBorderColor color = do
--- doSetBorderColor color = doFocus
--- use setWindowBorderWithFallback :: Display -> Window -> String -> Pixel -> X ()
+--   withFocused $ \windowId -> do
+--     dpy <- asks display
+--     setWindowBorderWithFallback $ dpy -> String -> Pixel -> X ()
+--     -- use setWindowBorderWithFallback :: Display -> Window -> String -> Pixel -> X ()
+
 
 ------------------------------------------------------------------------
 -- Run xmonad with all the defaults we set up.
 --
 main = do
-  xmproc <- spawnPipe "xmobar ~/.config/xmobar/xmobarrc.hs"
-  -- xmproc <- spawnPipe "taffybar"
+  statusHandle <- spawnPipe "xmobar ~/.config/xmobar/xmobarrc.hs"
+  -- statusHandle <- spawnPipe "taffybar"
   xmonad $ docks
          $ withNavigation2DConfig myNav2DConf
          $ additionalNav2DKeys (xK_Up, xK_Left, xK_Down, xK_Right)
@@ -645,13 +669,8 @@ main = do
          $ ewmh
          -- $ pagerHints -- uncomment to use taffybar
          $ defaults {
-         logHook = dynamicLogWithPP xmobarPP {
-                  ppCurrent = xmobarColor xmobarCurrentWorkspaceColor "" . wrap "[" "]"
-                , ppTitle = xmobarColor xmobarTitleColor "" . shorten 50
-                , ppSep = "   "
-                , ppOutput = hPutStrLn xmproc
-         } >> updatePointer (0.75, 0.75) (0.75, 0.75)
-      }
+            logHook = myLogHook statusHandle
+         }
 
 ------------------------------------------------------------------------
 --- SCRATCHPADS
@@ -698,31 +717,32 @@ myScratchPads = [ NS "calc" spawnCalc findCalc manageCalc ,
 --
 defaults = def {
     -- simple stuff
-    terminal           = myTerminal,
-    focusFollowsMouse  = myFocusFollowsMouse,
-    borderWidth        = myBorderWidth,
-    modMask            = myModMask,
-    workspaces         = myWorkspaces,
-    normalBorderColor  = myNormalBorderColor,
-    focusedBorderColor = myFocusedBorderColor,
+    terminal           = myTerminal
+    , focusFollowsMouse  = myFocusFollowsMouse
+    , borderWidth        = myBorderWidth
+    , modMask            = myModMask
+    , workspaces         = myWorkspaces
+    , normalBorderColor  = myNormalBorderColor
+    , focusedBorderColor = myFocusedBorderColor
 
-    -- key bindings
-    keys               = myKeys,
-    mouseBindings      = myMouseBindings,
+    -- , key bindings
+    , keys               = myKeys
+    , mouseBindings      = myMouseBindings
 
-    -- hooks, layouts
-    layoutHook         = myLayout,
+    -- , hooks, layouts
+    , layoutHook         = myLayout
 
-    -- handleEventHook    = E.fullscreenEventHook,
-    handleEventHook    = fullscreenEventHook,
-    manageHook         = insertPosition Below Newer <+> manageDocks <+> myManageHook,
-    startupHook        = myStartupHook
+    -- , handleEventHook    = E.fullscreenEventHook
+    , handleEventHook    = fullscreenEventHook
+    , manageHook         = insertPosition Below Newer <+> manageDocks <+> myManageHook
+    , startupHook        = myStartupHook
+
 }
 
 -- TODO
 -- use sendkeys and isBrowser to detect when focus is "chromium"
 -- and send key combination Ctrl + L, + C, + W, + N, + V, and Enter
--- this will "move to url bar, copy url, close current window,
+-- this will "move to url bar, copy url, close current window
 -- open new window, paste url"
 -- effectively tearing off the current tab into it's own window
 -- assign this to a key binding because there is no default keyboard
