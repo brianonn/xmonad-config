@@ -2,6 +2,10 @@
 
 # xmonad startup script should only run items once
 
+cfg="$HOME/.config/xmonad"
+log="${cfg}/log/startup.log"
+echo "starting Xmonad: $(date)" >> ${log}
+
 function CommandExists() {
     command -v "$1" >/dev/null 2>&1
 }
