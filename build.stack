@@ -6,14 +6,30 @@ pkg="my-xmonad"
 localbin="${cfg}/bin"
 out="${localbin}/${pkg}"
 yaml="${cfg}/stack.yaml"
+log="${cfg}/log/build.log"
+
+iso8601() {
+    date -u +'%FT%TZ'
+}
+
+log() {
+    local facility="$1"; shift
+    echo "$(iso8601): ${facility}: $*" >> ${log}
+}
 
 stack build :${pkg} --verbosity warn --stack-yaml ${yaml} && \
 stack install :${pkg} --local-bin-path ${localbin} --verbosity error
 status=$?
 
 if [ $status -eq 0 ]; then
-    [ -n "$1" ] && mv -f ${localbin}/${pkg} "$1"
-    [ -e "${localbin}/${pkg}" ] && echo "Created ${localbin}/${pkg} for testing"
+    if [ -n "$1" ] ; then
+        mv -f ${localbin}/${pkg} "$1"
+        echo log recompile $1
+        log recompile ln -snf $(stack exec -- which xmonad) "$1"
+        #ln -snf $(stack exec -- which xmonad) "$1"
+    else
+        log "local-test" "${localbin}/${pkg}"
+    fi
 else
     echo "ERROR: exit code $status"
 fi
