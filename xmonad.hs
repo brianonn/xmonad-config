@@ -149,14 +149,17 @@ bsp          = renamed [Replace "BSP"] -- renamed [CutWordsLeft 1]
 full         = renamed [Replace "Fullscreen"]
                $ noBorders (Full)
 
-tiled        = renamed [Replace "Tiled"]
-               $ Tall 1 (1/2) (3/100)
+horizontal   = renamed [Replace "Horizontal"] -- horizontal tiled with a small master region at the top
+               $ Tall 1 (1/2) (3/100)         -- (can be used for a quick-action button bar / status bar)
 
-pdfLayout1   = renamed [Replace "Resizeable Tall"] $ ResizableTall 1 (3/100) (7/8) []
-pdfLayout2   = renamed [Replace "Split Grid"] $ SplitGrid GVR.L 1 2 (7/8) (16/10) (3/100)
+vertical     = renamed [Replace "Vertical"]   -- vertical tiled with a small master region at the left side
+               $ Mirror horizontal            -- (can be used for a quick-action button bar / status bar)
+
+pdfLayout1   = renamed [Replace "PDF1 Resizeable Tall"] $ ResizableTall 1 (3/100) (7/8) []
+pdfLayout2   = renamed [Replace "PDF2 Split Grid"] $ SplitGrid GVR.L 1 2 (7/8) (16/10) (3/100)
 pdfLayouts   = pdfLayout1 ||| pdfLayout2
 
-layouts      = avoidStruts (bsp ||| tabLayout ||| full ||| pdfLayouts ||| tiled ||| Mirror tiled)
+layouts      = avoidStruts ( bsp ||| tabLayout ||| full ||| pdfLayouts ||| horizontal ||| vertical )
 
 myLayout     = smartBorders
                $ mkToggle (NOBORDERS ?? FULL ?? EOT)
@@ -205,7 +208,9 @@ red     = "#dc322f"
 myNormalBorderColor     = "#111111" -- gold1
 myFocusedBorderColor    = "#8489ff" -- gold3
 -- floatingBorderColor    = "#e489ff"
-floatingBorderColor    = "#51afaf"
+-- floatingBorderColor    = "#51afaf"
+floatingBorderColor    = gold3
+masterBorderColor      = "#1188ff"
 
 active      = gold3
 inactive    = gold1
@@ -552,6 +557,8 @@ myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
 myManageHook = composeAll
     [
       isDialog                        --> doFloat
+    -- center float the bitwarden chromium plugin password dialog crx_nngceckbapebfimnlniiiahkandclblb
+    , resource  =? "crx_nngceckbapebfimnlniiiahkandclblb" --> doRectFloat (W.RationalRect (31 % 100) (4 % 10) (3 % 8) (3 % 16))
     , resource  =? "desktop_window"   --> doIgnore
     , resource  =? "kdesktop"         --> doIgnore
     , className =? "mpv"              --> doRectFloat (W.RationalRect (1 % 4) (1 % 4) (1 % 2) (1 % 2))
@@ -561,7 +568,6 @@ myManageHook = composeAll
     , className =? "Xmessage"         --> doCenterFloat
     , className =? "Gxmessage"        --> doCenterFloat
     , className =? "Galculator"       --> doCenterFloat
-    , className =? "Steam"            --> doCenterFloat
     , className =? "Gimp"             --> doCenterFloat
     , resource  =? "gpicview"         --> doCenterFloat
     , className =? "MPlayer"          --> doCenterFloat
@@ -572,6 +578,7 @@ myManageHook = composeAll
     , className =? "Mate-power-preferences"       --> doCenterFloat
     , className =? "Xfce4-power-manager-settings" --> doCenterFloat
     , isFullscreen                    --> (doF W.focusDown <+> doFullFloat)
+    -- I wish I could make this work
     --, isFloating                      --> doSetBorderColor activeWarn
     , namedScratchpadManageHook myScratchPads
     ]
@@ -608,6 +615,7 @@ myLogHook :: Handle -> X ()
 myLogHook handle = do
   updatePointer (0.75, 0.75) (0.75, 0.75)
     >> colorWhen isFloating floatingBorderColor
+    >> colorWhen isMaster masterBorderColor
     >> dynamicLogWithPP xmobarPP {
          ppCurrent = xmobarColor xmobarCurrentWorkspaceColor "" . wrap "[" "]"
          , ppTitle = xmobarColor xmobarTitleColor "" . shorten 50
