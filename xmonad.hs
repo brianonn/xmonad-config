@@ -664,7 +664,7 @@ isFloating = ask >>= (\w -> liftX $ withWindowSet $ \ws -> return $ M.member w $
 -- Run xmonad with all the defaults we set up.
 --
 main = do
-  statusHandle <- spawnPipe "xmobar ~/.config/xmobar/xmobarrc.hs"
+  statusHandle <- spawnPipe "~/.local/bin/xmobar ~/.config/xmobar/xmobarrc.hs"
   -- statusHandle <- spawnPipe "taffybar"
   xmonad $ docks
          $ withNavigation2DConfig myNav2DConf
