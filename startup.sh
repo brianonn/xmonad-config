@@ -1,6 +1,10 @@
 #!/bin/bash
 
+#
 # xmonad startup script should only run items once
+#
+# this is called from the $HOME/.xsession file
+#
 
 cfg="$HOME/.config/xmonad"
 log="${cfg}/log/startup.log"
