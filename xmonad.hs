@@ -71,6 +71,8 @@ import XMonad.Prompt
 -- these are local from ./lib (hopefully)
 import BorderColors
 
+-- import Graphics.X11.ExtraTypes.XF86 -- audio keys
+
 
 ----------------------------mupdf--------------------------------------------
 -- Terminimport XMonad.Hooks.EwmhDesktopsal
@@ -104,6 +106,18 @@ myLauncher = "rofi -max-history-size 5 -sidebar-mode -parse-hosts -show-icons -s
 
 -- myNavigator     = "chromium"
 -- myEditor        = "emacs -f server-start"
+
+-- popup an OSD banner
+-- myOSD      = "dzen2 -ta c -p 1 -x 750 -y 525 -w 275 -fg '#fdf6e3' -bg '#b58900' -h 50 -fn roboto-24"
+myOSD      = "dzen2 -ta c -p 1 -x 750 -y 525 -w 275 -fg '#000000' -bg '#93a1a1' -h 50 -fn roboto-24"
+
+-- mixer/multimedia commands
+mmMixerCmd   = "$HOME/.config/xmonad/bin/amixer.sh"
+mmToggleMute = mmMixerCmd++" togglemute"
+mmPlayPause  = mmMixerCmd++" toggleplay"
+mmPrevious   = mmMixerCmd++" previous"
+mmNext       = mmMixerCmd++" next"
+mmEject      = "eject -T"
 
 
 ------------------------------------------------------------------------
@@ -155,8 +169,8 @@ horizontal   = renamed [Replace "Horizontal"] -- horizontal tiled with a small m
 vertical     = renamed [Replace "Vertical"]   -- vertical tiled with a small master region at the left side
                $ Mirror horizontal            -- (can be used for a quick-action button bar / status bar)
 
-pdfLayout1   = renamed [Replace "PDF1 Resizeable Tall"] $ ResizableTall 1 (3/100) (7/8) []
-pdfLayout2   = renamed [Replace "PDF2 Split Grid"] $ SplitGrid GVR.L 1 2 (7/8) (16/10) (3/100)
+pdfLayout1   = renamed [Replace "PDF Odd/Even"] $ ResizableTall 1 (3/100) (7/8) []
+pdfLayout2   = renamed [Replace "PDF Two Docs"] $ SplitGrid GVR.L 1 2 (7/8) (16/10) (3/100)
 pdfLayouts   = pdfLayout1 ||| pdfLayout2
 
 layouts      = avoidStruts ( bsp ||| tabLayout ||| full ||| pdfLayouts ||| horizontal ||| vertical )
@@ -321,15 +335,15 @@ myKeys conf@(XConfig {XMonad.modMask = modMask}) = M.fromList $
      ])
 
   -- Toggle current focus window to fullscreen, noborders
-  -- , ((modMask, xK_f), SendMEssage $ Toggle FULL)
-  , ((modMask, xK_f), sendMessage $ JumpToLayout "Fullscreen")
+  , ((modMask, xK_f), sendMessage $ Toggle FULL)
+  -- , ((modMask, xK_f), sendMessage $ JumpToLayout "Fullscreen")
 
   -- Calculator
   , ((modMask, xK_c), namedScratchpadAction myScratchPads "calc")
 
   -- Mute volume.
   , ((0, xF86XK_AudioMute),
-     spawn "amixer -q set Master toggle")
+     spawn$mmToggleMute++"|"++myOSD)
 
   -- Decrease volume.
   , ((0, xF86XK_AudioLowerVolume),
@@ -341,19 +355,19 @@ myKeys conf@(XConfig {XMonad.modMask = modMask}) = M.fromList $
 
   -- Audio previous.
   , ((0, 0x1008FF16),
-     spawn "")
+     spawn$mmPrevious++"|"++myOSD)
 
   -- Play/pause.
   , ((0, 0x1008FF14),
-     spawn "")
+     spawn$mmPlayPause++"|"++myOSD)
 
   -- Audio next.
   , ((0, 0x1008FF17),
-     spawn "")
+     spawn$mmNext++"|"++myOSD)
 
   -- Eject CD tray.
   , ((0, 0x1008FF2C),
-     spawn "eject -T")
+     spawn mmEject)
 
   --------------------------------------------------------------------
   -- "Standard" xmonad key bindings
@@ -366,7 +380,7 @@ myKeys conf@(XConfig {XMonad.modMask = modMask}) = M.fromList $
   -- Cycle through the available layout algorithms.
   , ((modMask, xK_space),
 --     sendMessage NextLayout >> (curLayout >>= \d->spawn$"xmessage "++d))
-     sendMessage NextLayout >> (curLayout >>= \d->spawn$"echo "++d++"|dzen2 -ta c -p 1 -x 2750 -y 525 -w 250 -fg '#fdf6e3' -bg '#b58900' -h 50 -fn roboto-24 "))
+     sendMessage NextLayout >> (curLayout >>= \d->spawn$"echo "++d++"|"++myOSD))
 
   --  Reset the layouts on the current workspace to default.
   , ((modMask .|. shiftMask, xK_space),
@@ -558,7 +572,8 @@ myManageHook = composeAll
     [
       isDialog                        --> doFloat
     -- center float the bitwarden chromium plugin password dialog crx_nngceckbapebfimnlniiiahkandclblb
-    , resource  =? "crx_nngceckbapebfimnlniiiahkandclblb" --> doRectFloat (W.RationalRect (31 % 100) (4 % 10) (3 % 8) (3 % 16))
+--    , className  =? "Bitwarden" --> doRectFloat (W.RationalRect (31 % 100) (4 % 10) (3 % 8) (3 % 16))
+    , title =? "Bitwarden" --> doRectFloat (W.RationalRect (783 % 1920) (253 % 1080) (355 % 1920) (575 % 1080))
     , resource  =? "desktop_window"   --> doIgnore
     , resource  =? "kdesktop"         --> doIgnore
     , className =? "mpv"              --> doRectFloat (W.RationalRect (1 % 4) (1 % 4) (1 % 2) (1 % 2))
@@ -568,7 +583,9 @@ myManageHook = composeAll
     , className =? "Xmessage"         --> doCenterFloat
     , className =? "Gxmessage"        --> doCenterFloat
     , className =? "Galculator"       --> doCenterFloat
-    , className =? "Gimp"             --> doCenterFloat
+    , className =? "gimp-2.10" <&&> role =? "gimp-image-window-1"  --> doShift "9"
+    , className =? "gimp-2.10"        --> doCenterFloat >> H.insertPosition H.Above H.Newer
+    , className =? "file-pdf-load"    --> doCenterFloat >> H.insertPosition H.Above H.Newer
     , resource  =? "gpicview"         --> doCenterFloat
     , className =? "MPlayer"          --> doCenterFloat
     , className =? "Pavucontrol"      --> doCenterFloat
@@ -582,7 +599,8 @@ myManageHook = composeAll
     --, isFloating                      --> doSetBorderColor activeWarn
     , namedScratchpadManageHook myScratchPads
     ]
-
+  where
+    role = stringProperty "WM_WINDOW_ROLE"
 
 ------------------------------------------------------------------------
 -- Status bars and logging
@@ -703,7 +721,7 @@ myScratchPads = [ NS "calc" spawnCalc findCalc manageCalc ,
       name :: String
       name = "scratchterm"
       command :: String
-      command = "alacritty --config-file $HOME/.config/alacritty/alacritty-scratch.yml --class " ++ name
+      command = "alacritty --config-file $HOME/.config/alacritty/alacritty-scratch.toml --class " ++ name
 
       doCenteredFloat :: Rational -> Rational -> ManageHook
       doCenteredFloat thewidth theheight =
@@ -725,7 +743,7 @@ myScratchPads = [ NS "calc" spawnCalc findCalc manageCalc ,
 --
 defaults = def {
     -- simple stuff
-    terminal           = myTerminal
+    terminal             = myTerminal
     , focusFollowsMouse  = myFocusFollowsMouse
     , borderWidth        = myBorderWidth
     , modMask            = myModMask
